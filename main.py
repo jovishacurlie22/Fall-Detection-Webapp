@@ -1,21 +1,23 @@
 # ============================================================
 #  Smart Elderly Fall Detection System
-#  Phase 2 — Human Detection (YOLOv8n)
+#  Phase 3 — Pose Estimation (MediaPipe)
 # ============================================================
 import cv2
 import sys
 
-from config       import WINDOW_TITLE, ACCENT_COLOR
-from app.camera   import CameraStream
-from app.detector import HumanDetector
-from app.utils    import (FPSCounter, draw_header, draw_footer,
-                          draw_status_pill, draw_person_count)
+from config            import WINDOW_TITLE, ACCENT_COLOR
+from app.camera        import CameraStream
+from app.detector      import HumanDetector
+from app.pose_estimator import PoseEstimator
+from app.utils         import (FPSCounter, draw_header, draw_footer,
+                                draw_status_pill, draw_person_count,
+                                draw_keypoint_debug)
 
 
 def main():
     print("=" * 58)
-    print("  🛡️  Smart Fall Detection System  —  Phase 2")
-    print("  Human Detection  |  YOLOv8 Nano")
+    print("  🛡️  Smart Fall Detection System  —  Phase 3")
+    print("  Pose Estimation  |  MediaPipe Skeleton")
     print("=" * 58)
     print("  Press  Q  to quit\n")
 
@@ -25,31 +27,42 @@ def main():
         print(e)
         sys.exit(1)
 
-    detector    = HumanDetector()
-    fps_counter = FPSCounter()
+    detector      = HumanDetector()
+    pose_estimator = PoseEstimator()
+    fps_counter   = FPSCounter()
 
     while True:
         ok, frame = cam.read()
         if not ok:
             continue
 
-        # ── Detection ────────────────────────────────────────
+        # ── Phase 2 — Person detection ────────────────────────
         frame, persons = detector.detect(frame)
         person_count   = len(persons)
-        fps            = fps_counter.tick()
+
+        # ── Phase 3 — Pose estimation ─────────────────────────
+        keypoints = None
+        if person_count > 0:
+            frame, keypoints, _ = pose_estimator.process(frame)
+
+        fps = fps_counter.tick()
+
+        # ── Pose status ───────────────────────────────────────
+        pose_detected = keypoints is not None
 
         # ── HUD Overlays ──────────────────────────────────────
         draw_header(frame)
         draw_person_count(frame, person_count)
+        draw_keypoint_debug(frame, keypoints)
         draw_footer(frame, fps,
-                    status="PERSON DETECTED" if person_count else "NO PERSON")
+                    status="POSE TRACKED" if pose_detected else
+                           ("PERSON — NO POSE" if person_count else "SCANNING"))
 
-        # Phase badge (top-right)
         h, w = frame.shape[:2]
-        badge_color = ACCENT_COLOR if person_count else (60, 60, 70)
-        draw_status_pill(frame,
-                         f"PHASE 2  |  YOLO  |  {person_count} PERSON(S)",
-                         badge_color, w - 310, 38)
+        badge_txt   = ("PHASE 3  |  POSE OK" if pose_detected
+                       else "PHASE 3  |  NO POSE")
+        badge_color = ACCENT_COLOR if pose_detected else (60, 60, 70)
+        draw_status_pill(frame, badge_txt, badge_color, w - 250, 38)
 
         # ── Display ───────────────────────────────────────────
         cv2.imshow(WINDOW_TITLE, frame)
@@ -57,6 +70,7 @@ def main():
             print("\n👋  Quit signal received.")
             break
 
+    pose_estimator.release()
     cam.release()
     cv2.destroyAllWindows()
     print("✅  Session ended cleanly.")

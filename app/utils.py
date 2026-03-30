@@ -87,3 +87,35 @@ def draw_person_count(frame, count: int):
                 color, 1, cv2.LINE_AA)
     # horizontal divider
     cv2.line(frame, (0, 90), (w, 90), (40, 40, 45), 1)
+
+def draw_keypoint_debug(frame, keypoints):
+    """
+    Small debug panel — shows raw x,y of 9 key joints
+    in a semi-transparent sidebar for verification.
+    """
+    if keypoints is None:
+        return
+
+    from app.pose_estimator import KEYPOINT_INDICES
+    import numpy as np
+
+    h, w = frame.shape[:2]
+    panel_w = 210
+    overlay  = frame.copy()
+    cv2.rectangle(overlay, (w - panel_w, 95), (w, 95 + 28 * 10 + 16),
+                  (12, 12, 18), -1)
+    cv2.addWeighted(overlay, 0.78, frame, 0.22, 0, frame)
+    cv2.line(frame, (w - panel_w, 95), (w, 95), (0, 180, 255), 1)
+
+    kp = keypoints.reshape(33, 3)
+    cv2.putText(frame, "  KEYPOINTS",
+                (w - panel_w + 6, 113),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.46, (0, 180, 255), 1)
+
+    for i, (name, idx) in enumerate(KEYPOINT_INDICES.items()):
+        x, y, v = kp[idx]
+        color = (0, 220, 110) if v > 0.5 else (80, 80, 80)
+        text  = f"  {name[:14]:<14} {x:.2f},{y:.2f}"
+        cv2.putText(frame, text,
+                    (w - panel_w + 4, 133 + i * 22),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.38, color, 1)

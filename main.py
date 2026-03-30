@@ -12,6 +12,7 @@ from app.pose_estimator import PoseEstimator
 from app.utils         import (FPSCounter, draw_header, draw_footer,
                                 draw_status_pill, draw_person_count,
                                 draw_keypoint_debug)
+from app.fall_detector import FallDetector
 
 
 def main():
@@ -29,6 +30,7 @@ def main():
 
     detector      = HumanDetector()
     pose_estimator = PoseEstimator()
+    fall_detector = FallDetector()
     fps_counter   = FPSCounter()
 
     while True:
@@ -42,8 +44,12 @@ def main():
 
         # ── Phase 3 — Pose estimation ─────────────────────────
         keypoints = None
+        fall_detected = False
+
         if person_count > 0:
             frame, keypoints, _ = pose_estimator.process(frame)
+            fall_detected = fall_detector.update(keypoints)
+
 
         fps = fps_counter.tick()
 
@@ -54,6 +60,19 @@ def main():
         draw_header(frame)
         draw_person_count(frame, person_count)
         draw_keypoint_debug(frame, keypoints)
+        if fall_detected:
+            cv2.putText(
+                frame,
+                "FALL SUSPECTED!",
+                (40, 120),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.2,
+                (0, 0, 255),
+                3,
+                cv2.LINE_AA
+            )
+            print("⚠️ FALL SUSPECTED")
+
         draw_footer(frame, fps,
                     status="POSE TRACKED" if pose_detected else
                            ("PERSON — NO POSE" if person_count else "SCANNING"))

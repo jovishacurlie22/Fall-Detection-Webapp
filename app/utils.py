@@ -74,3 +74,16 @@ def draw_footer(frame, fps: float, status: str = "MONITORING"):
     cv2.putText(frame, right,
                 (w - 340, h - 13), cv2.FONT_HERSHEY_SIMPLEX,
                 0.50, (180, 180, 180), 1, cv2.LINE_AA)
+
+
+def draw_person_count(frame, count: int):
+    """Top-left detection count badge."""
+    h, w = frame.shape[:2]
+    color  = (0, 200, 100) if count > 0 else (80, 80, 90)
+    label  = f"  PERSONS DETECTED: {count}  "
+    cv2.putText(frame, label,
+                (12, 82),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.60,
+                color, 1, cv2.LINE_AA)
+    # horizontal divider
+    cv2.line(frame, (0, 90), (w, 90), (40, 40, 45), 1)

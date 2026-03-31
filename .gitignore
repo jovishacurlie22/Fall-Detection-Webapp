@@ -1,0 +1,6 @@
+dataset/
+dataset_sequences/
+*.zip
+runs/
+__pycache__/
+*.pt
